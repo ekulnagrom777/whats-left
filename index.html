@@ -82,7 +82,7 @@
   #results { display: none; }
   #results.shown { display: block; }
 
-  section.block { margin-top: 110px; opacity: 0; transform: translateY(24px); transition: opacity .8s ease, transform .8s ease; }
+  section.block { margin-top: 84px; opacity: 0; transform: translateY(24px); transition: opacity .8s ease, transform .8s ease; }
   section.block.vis { opacity: 1; transform: none; }
 
   .block h2 { font-weight: 400; font-size: 1.9rem; letter-spacing: -0.01em; }
@@ -99,6 +99,12 @@
   .legend .i-used { background: #4b4b56; }
   .legend .i-left { background: var(--ink); box-shadow: 0 0 6px rgba(242,238,226,.5); }
   .legend .i-now { background: var(--gold); box-shadow: 0 0 8px rgba(232,185,79,.7); }
+
+  /* ---- trio of quick stats ---- */
+  .trio { margin-top: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px 48px; }
+  .trio .stat h3 { font-weight: 400; font-size: 1.45rem; margin-top: 28px; }
+  .trio .stat p.note { font-size: .95rem; }
+  .trio .stat .dots { margin-top: 16px; }
 
   /* ---- parents ---- */
   .parents-setup { margin-top: 26px; display: flex; gap: 14px; flex-wrap: wrap; align-items: baseline; color: var(--dim); font-size: 1.02rem; }
@@ -162,6 +168,27 @@
       <h2>About <span class="big" id="n-books">0</span> books.</h2>
       <p class="note">If you read one a month for the rest of your life. Choose carefully — this is your entire remaining library.</p>
       <div class="dots" id="dots-books"></div>
+    </section>
+
+    <section class="block" id="sec-more">
+      <h2>And for scale.</h2>
+      <div class="trio">
+        <div class="stat">
+          <h3><span class="big" id="n-worldcups">0</span> more World Cups.</h3>
+          <p class="note">Every four years, whether your team breaks your heart or not.</p>
+          <div class="dots" id="dots-worldcups"></div>
+        </div>
+        <div class="stat">
+          <h3><span class="big" id="n-holidays">0</span> more holidays.</h3>
+          <p class="note">At two proper getaways a year. Book the flight.</p>
+          <div class="dots" id="dots-holidays"></div>
+        </div>
+        <div class="stat">
+          <h3>You'll see the <span class="big" id="n-playstation">PS5</span>.</h3>
+          <p class="note">A new PlayStation lands roughly every seven years. Each dot is a console generation you'll get to play.</p>
+          <div class="dots" id="dots-playstation"></div>
+        </div>
+      </div>
     </section>
 
     <section class="block" id="sec-parents">
@@ -408,13 +435,14 @@
   if (!reduced) requestAnimationFrame(tick);
 
   /* ================= count-up numbers ================= */
-  function countUp(el, target, dur) {
-    if (reduced) { el.textContent = fmt(target); return; }
+  function countUp(el, target, dur, prefix) {
+    prefix = prefix || '';
+    if (reduced) { el.textContent = prefix + fmt(target); return; }
     const t0 = performance.now();
     function frame(t) {
       const k = Math.min((t - t0) / dur, 1);
       const eased = 1 - Math.pow(1 - k, 3);
-      el.textContent = fmt(Math.round(target * eased));
+      el.textContent = prefix + fmt(Math.round(target * eased));
       if (k < 1) {
         const r = el.getBoundingClientRect();
         if (r.top < H && r.bottom > 0 && Math.random() < 0.7) {
@@ -429,16 +457,18 @@
   }
 
   /* ================= reveal ================= */
-  const pending = {};   // section id -> {el, value, gridId}
+  const pending = {};   // section id -> [{el, value, gridId, prefix}]
   function reveal() {
     const obs = new IntersectionObserver((entries) => {
       entries.forEach(e => {
         if (!e.isIntersecting) return;
         e.target.classList.add('vis');
-        const job = pending[e.target.id];
-        if (job) {
-          countUp(job.el, job.value, 1900);
-          if (job.gridId && grids[job.gridId]) grids[job.gridId].started = true;
+        const jobs = pending[e.target.id];
+        if (jobs) {
+          jobs.forEach(j => {
+            countUp(j.el, j.value, 1900, j.prefix);
+            if (j.gridId && grids[j.gridId]) grids[j.gridId].started = true;
+          });
           delete pending[e.target.id];
         }
         obs.unobserve(e.target);
@@ -454,21 +484,42 @@
 
     $('results').classList.add('shown');   // before grid layout so widths are measurable
 
+    // re-running with a new age: un-reveal everything so the observer fires again
+    document.querySelectorAll('.block.vis').forEach(b => b.classList.remove('vis'));
+
     const satTotal = Math.round(LIFE * 52.18);
     const satUsed = Math.round(age * 52.18);
     dotGrid('dots-saturdays', satTotal, satUsed, { cell: 10 });   // dense — the whole wall should fit on one screen
-    pending['sec-saturdays'] = { el: $('n-saturdays'), value: satTotal - satUsed, gridId: 'dots-saturdays' };
+    pending['sec-saturdays'] = [{ el: $('n-saturdays'), value: satTotal - satUsed, gridId: 'dots-saturdays' }];
 
     dotGrid('dots-summers', LIFE, age, { cell: 30 });             // each dot is a whole summer — let them be big
-    pending['sec-summers'] = { el: $('n-summers'), value: yearsLeft, gridId: 'dots-summers' };
+    pending['sec-summers'] = [{ el: $('n-summers'), value: yearsLeft, gridId: 'dots-summers' }];
 
     const moonTotal = Math.round(LIFE * 12.37);
     const moonUsed = Math.round(age * 12.37);
     dotGrid('dots-moons', moonTotal, moonUsed);
-    pending['sec-moons'] = { el: $('n-moons'), value: moonTotal - moonUsed, gridId: 'dots-moons' };
+    pending['sec-moons'] = [{ el: $('n-moons'), value: moonTotal - moonUsed, gridId: 'dots-moons' }];
 
     dotGrid('dots-books', LIFE * 12, age * 12, { cap: 1200 });
-    pending['sec-books'] = { el: $('n-books'), value: yearsLeft * 12, gridId: 'dots-books' };
+    pending['sec-books'] = [{ el: $('n-books'), value: yearsLeft * 12, gridId: 'dots-books' }];
+
+    dotGrid('dots-worldcups', Math.floor(LIFE / 4), Math.floor(age / 4), { cell: 30 });
+    dotGrid('dots-holidays', LIFE * 2, age * 2);
+    dotGrid('dots-playstation', Math.floor(LIFE / 7), Math.floor(age / 7), { cell: 30 });
+    pending['sec-more'] = [
+      { el: $('n-worldcups'), value: Math.floor(yearsLeft / 4), gridId: 'dots-worldcups' },
+      { el: $('n-holidays'), value: yearsLeft * 2, gridId: 'dots-holidays' },
+      { el: $('n-playstation'), value: 5 + Math.floor(yearsLeft / 7), prefix: 'PS', gridId: 'dots-playstation' }
+    ];
+
+    // refresh the parents section if it was already filled in, otherwise reset it
+    if ($('pAge').value && $('pVisits').value) {
+      runParents();
+    } else {
+      $('pPunch').classList.remove('shown');
+      $('dots-parents').innerHTML = '';
+      delete grids['dots-parents'];
+    }
 
     reveal();
     burstFrom($('goBtn'), 40);
