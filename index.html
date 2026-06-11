@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>What's Left — see your life in dots</title>
+<meta name="description" content="Enter your age. See every Saturday, summer and full moon you have left — as dots you can count.">
+<meta property="og:title" content="What's Left">
+<meta property="og:description" content="See every Saturday you have left. As dots.">
+<style>
+  :root {
+    --bg: #0d0d0f;
+    --ink: #e8e4da;
+    --dim: #8a857a;
+    --faint: #2b2b30;
+    --gold: #d4a946;
+    --used: #3a3a40;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: Georgia, 'Times New Roman', serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 680px; margin: 0 auto; padding: 0 24px 120px; }
+
+  /* ---- hero ---- */
+  .hero { min-height: 88vh; display: flex; flex-direction: column; justify-content: center; }
+  .hero h1 {
+    font-size: clamp(2.6rem, 8vw, 4.4rem);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  .hero h1 em { font-style: italic; color: var(--gold); }
+  .hero p.sub { margin-top: 20px; color: var(--dim); font-size: 1.15rem; max-width: 30em; }
+
+  .age-row { margin-top: 48px; display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  .age-row label { color: var(--dim); font-size: 1.1rem; }
+  #age {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid var(--gold);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 2.6rem;
+    width: 110px;
+    text-align: center;
+    outline: none;
+  }
+  #age::-webkit-outer-spin-button, #age::-webkit-inner-spin-button { -webkit-appearance: none; }
+  #age[type=number] { -moz-appearance: textfield; }
+  .go {
+    background: var(--gold);
+    color: #14110a;
+    border: none;
+    font-family: inherit;
+    font-size: 1.05rem;
+    padding: 12px 28px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: transform .15s ease, opacity .15s ease;
+  }
+  .go:hover { transform: translateY(-1px); opacity: .92; }
+  .hint { margin-top: 14px; color: var(--dim); font-size: .85rem; opacity: .7; }
+
+  /* ---- results ---- */
+  #results { display: none; }
+  #results.shown { display: block; }
+
+  section.block { margin-top: 110px; opacity: 0; transform: translateY(24px); transition: opacity .8s ease, transform .8s ease; }
+  section.block.vis { opacity: 1; transform: none; }
+
+  .block h2 { font-weight: 400; font-size: 1.9rem; letter-spacing: -0.01em; }
+  .block .big { color: var(--gold); }
+  .block p.note { color: var(--dim); margin-top: 8px; font-size: 1.02rem; max-width: 34em; }
+
+  .dots { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 4px; }
+  .dots .d {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--faint);
+  }
+  .dots .d.used { background: var(--used); }
+  .dots .d.left { background: var(--ink); }
+  .dots .d.now {
+    background: var(--gold);
+    box-shadow: 0 0 0 0 rgba(212,169,70,.6);
+    animation: pulse 2s infinite;
+  }
+  .dots.tiny .d { width: 5px; height: 5px; gap: 3px; }
+  .dots.tiny { gap: 3px; }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(212,169,70,.55); }
+    70% { box-shadow: 0 0 0 9px rgba(212,169,70,0); }
+    100% { box-shadow: 0 0 0 0 rgba(212,169,70,0); }
+  }
+  .legend { margin-top: 18px; color: var(--dim); font-size: .85rem; display: flex; gap: 22px; flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .legend .i-used { background: var(--used); }
+  .legend .i-left { background: var(--ink); }
+  .legend .i-now { background: var(--gold); }
+
+  /* ---- parents ---- */
+  .parents-setup { margin-top: 26px; display: flex; gap: 14px; flex-wrap: wrap; align-items: baseline; color: var(--dim); font-size: 1.02rem; }
+  .parents-setup input {
+    background: transparent; border: none; border-bottom: 1px solid var(--dim);
+    color: var(--ink); font-family: inherit; font-size: 1.3rem; width: 64px; text-align: center; outline: none;
+  }
+  .punch { margin-top: 26px; font-size: 1.35rem; line-height: 1.5; display: none; }
+  .punch.shown { display: block; }
+  .punch strong { color: var(--gold); font-weight: 400; }
+
+  /* ---- share / footer ---- */
+  .share-wrap { margin-top: 120px; text-align: center; }
+  .share-wrap p { color: var(--dim); margin-bottom: 22px; font-size: 1.1rem; }
+  .footer { margin-top: 90px; text-align: center; color: var(--dim); font-size: .9rem; opacity: .75; }
+  .footer em { color: var(--ink); font-style: italic; }
+  #copied { color: var(--gold); font-size: .9rem; margin-top: 12px; opacity: 0; transition: opacity .3s; }
+  #copied.on { opacity: 1; }
+</style>
+</head>
+<body>
+<main>
+
+  <div class="hero">
+    <h1>The average life is 4,680 Saturdays.<br><em>How many do you have left?</em></h1>
+    <p class="sub">Not a countdown. A way of seeing. Enter your age and look at the rest of your life — every dot is one you can still spend.</p>
+    <div class="age-row">
+      <label for="age">I am</label>
+      <input id="age" type="number" min="1" max="99" placeholder="30" inputmode="numeric">
+      <label>years old.</label>
+      <button class="go" id="goBtn">Show me</button>
+    </div>
+    <p class="hint">Nothing is stored. Nothing is tracked. It's just dots.</p>
+  </div>
+
+  <div id="results">
+
+    <section class="block" id="sec-saturdays">
+      <h2>You have <span class="big" id="n-saturdays"></span> Saturdays left.</h2>
+      <p class="note">Every dot below is one Saturday of a 90-year life. The grey ones are spent. The bright ones are yours.</p>
+      <div class="dots tiny" id="dots-saturdays"></div>
+      <div class="legend">
+        <span><i class="i-used"></i> spent</span>
+        <span><i class="i-now"></i> this Saturday</span>
+        <span><i class="i-left"></i> still yours</span>
+      </div>
+    </section>
+
+    <section class="block" id="sec-summers">
+      <h2><span class="big" id="n-summers"></span> more summers.</h2>
+      <p class="note">That's it. That's the whole list. Each dot is an entire summer — every barbecue, every late evening, every holiday of that year, in one circle.</p>
+      <div class="dots" id="dots-summers"></div>
+    </section>
+
+    <section class="block" id="sec-moons">
+      <h2><span class="big" id="n-moons"></span> full moons to go.</h2>
+      <p class="note">It rises roughly thirteen times a year whether you look up or not. This is how many chances you have left to look up.</p>
+      <div class="dots tiny" id="dots-moons"></div>
+    </section>
+
+    <section class="block" id="sec-books">
+      <h2>About <span class="big" id="n-books"></span> books.</h2>
+      <p class="note">If you read one a month for the rest of your life. Choose carefully — this is your entire remaining library.</p>
+      <div class="dots" id="dots-books"></div>
+    </section>
+
+    <section class="block" id="sec-parents">
+      <h2>And the hard one.</h2>
+      <p class="note">If your parents are still here — how old is the older one, and how many days a year do you actually spend together?</p>
+      <div class="parents-setup">
+        <span>They're</span> <input id="pAge" type="number" min="1" max="110" placeholder="60" inputmode="numeric">
+        <span>and we see each other about</span> <input id="pVisits" type="number" min="1" max="365" placeholder="10" inputmode="numeric">
+        <span>days a year.</span>
+        <button class="go" id="pBtn" style="font-size:.95rem; padding:9px 22px;">Count them</button>
+      </div>
+      <p class="punch" id="pPunch"></p>
+      <div class="dots" id="dots-parents"></div>
+    </section>
+
+    <div class="share-wrap block" id="sec-share">
+      <p>If a dot just hit you in the chest, it'll hit someone you love too.</p>
+      <button class="go" id="shareBtn">Share what's left</button>
+      <div id="copied">Copied — go paste it somewhere that matters.</div>
+    </div>
+
+    <div class="footer block" id="sec-footer">
+      <p><em>“It's not morbid. It's the opposite — the dots are the reason to leave work on time.”</em></p>
+      <p style="margin-top:10px;">What's Left · a 90-year assumption · be pleasantly surprised</p>
+    </div>
+
+  </div>
+</main>
+
+<script>
+(function () {
+  const LIFE = 90;
+  const $ = (id) => document.getElementById(id);
+  let age = null;
+
+  function dotGrid(el, total, used, opts) {
+    opts = opts || {};
+    el.innerHTML = '';
+    const cap = opts.cap || 5000;
+    let scale = 1;
+    if (total > cap) scale = total / cap;
+    const shown = Math.round(total / scale);
+    const usedShown = Math.round(used / scale);
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < shown; i++) {
+      const d = document.createElement('span');
+      d.className = 'd ' + (i < usedShown ? 'used' : (i === usedShown ? 'now' : 'left'));
+      frag.appendChild(d);
+    }
+    el.appendChild(frag);
+  }
+
+  function fmt(n) { return n.toLocaleString('en-GB'); }
+
+  function reveal() {
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('vis'); obs.unobserve(e.target); } });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.block').forEach(b => obs.observe(b));
+  }
+
+  function run() {
+    age = parseInt($('age').value, 10);
+    if (!age || age < 1 || age > 99) { $('age').focus(); return; }
+    const yearsLeft = Math.max(LIFE - age, 0);
+
+    const satTotal = Math.round(LIFE * 52.18);
+    const satUsed = Math.round(age * 52.18);
+    $('n-saturdays').textContent = fmt(satTotal - satUsed);
+    dotGrid($('dots-saturdays'), satTotal, satUsed);
+
+    $('n-summers').textContent = fmt(yearsLeft);
+    dotGrid($('dots-summers'), LIFE, age);
+
+    const moonTotal = Math.round(LIFE * 12.37);
+    const moonUsed = Math.round(age * 12.37);
+    $('n-moons').textContent = fmt(moonTotal - moonUsed);
+    dotGrid($('dots-moons'), moonTotal, moonUsed);
+
+    const bookTotal = LIFE * 12, bookUsed = age * 12;
+    $('n-books').textContent = fmt(yearsLeft * 12);
+    dotGrid($('dots-books'), bookTotal, bookUsed, { cap: 1200 });
+
+    $('results').classList.add('shown');
+    reveal();
+    document.getElementById('sec-saturdays').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function runParents() {
+    const pa = parseInt($('pAge').value, 10);
+    const v = parseInt($('pVisits').value, 10);
+    if (!pa || !v) return;
+    const theirYearsLeft = Math.max(LIFE - pa, 0);
+    const visitsLeft = theirYearsLeft * v;
+    const visitsHad = Math.min(age, pa) * v; // rough: your whole life so far at today's rate
+    const pct = Math.round(visitsHad / (visitsHad + visitsLeft) * 100);
+    $('pPunch').innerHTML =
+      'You have about <strong>' + fmt(visitsLeft) + ' days</strong> left together. ' +
+      'You’ve already used roughly <strong>' + pct + '%</strong> of your time with them.' +
+      (visitsLeft <= 400 ? ' Every dot below is one of those days. You can count them.' : '');
+    $('pPunch').classList.add('shown');
+    dotGrid($('dots-parents'), visitsHad + visitsLeft, visitsHad, { cap: 1500 });
+  }
+
+  function share() {
+    const txt = 'I just found out I have ' + $('n-saturdays').textContent +
+      ' Saturdays left. And ' + $('n-summers').textContent +
+      ' summers. See yours — What’s Left: ' + location.href;
+    if (navigator.share) {
+      navigator.share({ title: 'What’s Left', text: txt }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(txt).then(() => {
+        $('copied').classList.add('on');
+        setTimeout(() => $('copied').classList.remove('on'), 2600);
+      });
+    }
+  }
+
+  $('goBtn').addEventListener('click', run);
+  $('age').addEventListener('keydown', e => { if (e.key === 'Enter') run(); });
+  $('pBtn').addEventListener('click', runParents);
+  $('pVisits').addEventListener('keydown', e => { if (e.key === 'Enter') runParents(); });
+  $('shareBtn').addEventListener('click', share);
+})();
+</script>
+</body>
+</html>
