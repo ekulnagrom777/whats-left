@@ -9,23 +9,29 @@
 <meta property="og:description" content="See every Saturday you have left. As dots.">
 <style>
   :root {
-    --bg: #0d0d0f;
-    --ink: #e8e4da;
-    --dim: #8a857a;
-    --faint: #2b2b30;
-    --gold: #d4a946;
-    --used: #3a3a40;
+    --bg: #101016;
+    --ink: #f2eee2;
+    --dim: #9b9588;
+    --gold: #e8b94f;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { scroll-behavior: smooth; }
   body {
-    background: var(--bg);
+    background:
+      radial-gradient(1200px 800px at 70% -10%, #1c1a26 0%, transparent 60%),
+      radial-gradient(900px 700px at 10% 40%, #16141d 0%, transparent 55%),
+      var(--bg);
     color: var(--ink);
     font-family: Georgia, 'Times New Roman', serif;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
   }
-  main { max-width: 680px; margin: 0 auto; padding: 0 24px 120px; }
+  #fx {
+    position: fixed; inset: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 5;
+  }
+  main { max-width: 680px; margin: 0 auto; padding: 0 24px 120px; position: relative; z-index: 1; }
 
   /* ---- hero ---- */
   .hero { min-height: 88vh; display: flex; flex-direction: column; justify-content: center; }
@@ -34,8 +40,9 @@
     font-weight: 400;
     letter-spacing: -0.02em;
     line-height: 1.1;
+    text-shadow: 0 0 60px rgba(232,185,79,.12);
   }
-  .hero h1 em { font-style: italic; color: var(--gold); }
+  .hero h1 em { font-style: italic; color: var(--gold); text-shadow: 0 0 30px rgba(232,185,79,.45); }
   .hero p.sub { margin-top: 20px; color: var(--dim); font-size: 1.15rem; max-width: 30em; }
 
   .age-row { margin-top: 48px; display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
@@ -62,9 +69,10 @@
     padding: 12px 28px;
     border-radius: 999px;
     cursor: pointer;
-    transition: transform .15s ease, opacity .15s ease;
+    box-shadow: 0 0 24px rgba(232,185,79,.35);
+    transition: transform .15s ease, box-shadow .15s ease;
   }
-  .go:hover { transform: translateY(-1px); opacity: .92; }
+  .go:hover { transform: translateY(-1px); box-shadow: 0 0 36px rgba(232,185,79,.55); }
   .hint { margin-top: 14px; color: var(--dim); font-size: .85rem; opacity: .7; }
 
   /* ---- results ---- */
@@ -75,34 +83,19 @@
   section.block.vis { opacity: 1; transform: none; }
 
   .block h2 { font-weight: 400; font-size: 1.9rem; letter-spacing: -0.01em; }
-  .block .big { color: var(--gold); }
+  .block .big { color: var(--gold); text-shadow: 0 0 24px rgba(232,185,79,.5); }
   .block p.note { color: var(--dim); margin-top: 8px; font-size: 1.02rem; max-width: 34em; }
 
-  .dots { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 4px; }
-  .dots .d {
-    width: 9px; height: 9px; border-radius: 50%;
-    background: var(--faint);
-  }
-  .dots .d.used { background: var(--used); }
-  .dots .d.left { background: var(--ink); }
-  .dots .d.now {
-    background: var(--gold);
-    box-shadow: 0 0 0 0 rgba(212,169,70,.6);
-    animation: pulse 2s infinite;
-  }
-  .dots.tiny .d { width: 5px; height: 5px; gap: 3px; }
-  .dots.tiny { gap: 3px; }
-  @keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(212,169,70,.55); }
-    70% { box-shadow: 0 0 0 9px rgba(212,169,70,0); }
-    100% { box-shadow: 0 0 0 0 rgba(212,169,70,0); }
-  }
+  /* dot grids are rendered to canvas — thousands of DOM nodes were too slow to paint */
+  .dots { margin-top: 28px; }
+  .dots canvas { display: block; width: 100%; }
+
   .legend { margin-top: 18px; color: var(--dim); font-size: .85rem; display: flex; gap: 22px; flex-wrap: wrap; }
   .legend span { display: inline-flex; align-items: center; gap: 7px; }
-  .legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-  .legend .i-used { background: var(--used); }
-  .legend .i-left { background: var(--ink); }
-  .legend .i-now { background: var(--gold); }
+  .legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .legend .i-used { background: #4b4b56; }
+  .legend .i-left { background: var(--ink); box-shadow: 0 0 6px rgba(242,238,226,.5); }
+  .legend .i-now { background: var(--gold); box-shadow: 0 0 8px rgba(232,185,79,.7); }
 
   /* ---- parents ---- */
   .parents-setup { margin-top: 26px; display: flex; gap: 14px; flex-wrap: wrap; align-items: baseline; color: var(--dim); font-size: 1.02rem; }
@@ -112,18 +105,17 @@
   }
   .punch { margin-top: 26px; font-size: 1.35rem; line-height: 1.5; display: none; }
   .punch.shown { display: block; }
-  .punch strong { color: var(--gold); font-weight: 400; }
+  .punch strong { color: var(--gold); font-weight: 400; text-shadow: 0 0 20px rgba(232,185,79,.5); }
 
   /* ---- share / footer ---- */
   .share-wrap { margin-top: 120px; text-align: center; }
   .share-wrap p { color: var(--dim); margin-bottom: 22px; font-size: 1.1rem; }
   .footer { margin-top: 90px; text-align: center; color: var(--dim); font-size: .9rem; opacity: .75; }
   .footer em { color: var(--ink); font-style: italic; }
-  #copied { color: var(--gold); font-size: .9rem; margin-top: 12px; opacity: 0; transition: opacity .3s; }
-  #copied.on { opacity: 1; }
 </style>
 </head>
 <body>
+<canvas id="fx"></canvas>
 <main>
 
   <div class="hero">
@@ -141,9 +133,9 @@
   <div id="results">
 
     <section class="block" id="sec-saturdays">
-      <h2>You have <span class="big" id="n-saturdays"></span> Saturdays left.</h2>
+      <h2>You have <span class="big" id="n-saturdays">0</span> Saturdays left.</h2>
       <p class="note">Every dot below is one Saturday of a 90-year life. The grey ones are spent. The bright ones are yours.</p>
-      <div class="dots tiny" id="dots-saturdays"></div>
+      <div class="dots" id="dots-saturdays"></div>
       <div class="legend">
         <span><i class="i-used"></i> spent</span>
         <span><i class="i-now"></i> this Saturday</span>
@@ -152,19 +144,19 @@
     </section>
 
     <section class="block" id="sec-summers">
-      <h2><span class="big" id="n-summers"></span> more summers.</h2>
+      <h2><span class="big" id="n-summers">0</span> more summers.</h2>
       <p class="note">That's it. That's the whole list. Each dot is an entire summer — every barbecue, every late evening, every holiday of that year, in one circle.</p>
       <div class="dots" id="dots-summers"></div>
     </section>
 
     <section class="block" id="sec-moons">
-      <h2><span class="big" id="n-moons"></span> full moons to go.</h2>
+      <h2><span class="big" id="n-moons">0</span> full moons to go.</h2>
       <p class="note">It rises roughly thirteen times a year whether you look up or not. This is how many chances you have left to look up.</p>
-      <div class="dots tiny" id="dots-moons"></div>
+      <div class="dots" id="dots-moons"></div>
     </section>
 
     <section class="block" id="sec-books">
-      <h2>About <span class="big" id="n-books"></span> books.</h2>
+      <h2>About <span class="big" id="n-books">0</span> books.</h2>
       <p class="note">If you read one a month for the rest of your life. Choose carefully — this is your entire remaining library.</p>
       <div class="dots" id="dots-books"></div>
     </section>
@@ -184,8 +176,7 @@
 
     <div class="share-wrap block" id="sec-share">
       <p>If a dot just hit you in the chest, it'll hit someone you love too.</p>
-      <button class="go" id="shareBtn">Share what's left</button>
-      <div id="copied">Copied — go paste it somewhere that matters.</div>
+      <button class="go" id="shareBtn">Post what's left on 𝕏</button>
     </div>
 
     <div class="footer block" id="sec-footer">
@@ -200,32 +191,254 @@
 (function () {
   const LIFE = 90;
   const $ = (id) => document.getElementById(id);
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
   let age = null;
-
-  function dotGrid(el, total, used, opts) {
-    opts = opts || {};
-    el.innerHTML = '';
-    const cap = opts.cap || 5000;
-    let scale = 1;
-    if (total > cap) scale = total / cap;
-    const shown = Math.round(total / scale);
-    const usedShown = Math.round(used / scale);
-    const frag = document.createDocumentFragment();
-    for (let i = 0; i < shown; i++) {
-      const d = document.createElement('span');
-      d.className = 'd ' + (i < usedShown ? 'used' : (i === usedShown ? 'now' : 'left'));
-      frag.appendChild(d);
-    }
-    el.appendChild(frag);
-  }
 
   function fmt(n) { return n.toLocaleString('en-GB'); }
 
+  /* ================= full-screen particle layer ================= */
+  const fx = $('fx');
+  const fctx = fx.getContext('2d');
+  let W, H;
+  const sparks = [];
+  const embers = [];
+
+  function resizeFx() {
+    W = window.innerWidth; H = window.innerHeight;
+    fx.width = W * dpr; fx.height = H * dpr;
+    fctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resizeFx();
+
+  function spark(x, y, opts) {
+    opts = opts || {};
+    const a = opts.angle !== undefined ? opts.angle : Math.random() * Math.PI * 2;
+    const sp = opts.speed !== undefined ? opts.speed : 0.6 + Math.random() * 2.4;
+    sparks.push({
+      x: x, y: y,
+      vx: Math.cos(a) * sp,
+      vy: Math.sin(a) * sp - 0.6,
+      r: 0.8 + Math.random() * 2,
+      life: 0,
+      max: 50 + Math.random() * 50,
+      gold: opts.gold !== undefined ? opts.gold : true
+    });
+  }
+  function burst(x, y, n) { for (let i = 0; i < n; i++) spark(x, y); }
+  function burstFrom(el, n) {
+    const r = el.getBoundingClientRect();
+    burst(r.left + r.width / 2, r.top + r.height / 2, n);
+  }
+
+  function drawFx() {
+    fctx.clearRect(0, 0, W, H);
+
+    if (embers.length < 40 && Math.random() < 0.25) {
+      embers.push({
+        x: Math.random() * W, y: H + 10,
+        vx: (Math.random() - 0.5) * 0.18,
+        vy: -(0.15 + Math.random() * 0.35),
+        r: 0.8 + Math.random() * 1.8,
+        life: 0, max: 700 + Math.random() * 600,
+        gold: Math.random() < 0.45
+      });
+    }
+
+    for (let i = embers.length - 1; i >= 0; i--) {
+      const p = embers[i];
+      p.life++; p.x += p.vx + Math.sin((p.life + p.y) * 0.01) * 0.15; p.y += p.vy;
+      if (p.life > p.max || p.y < -12) { embers.splice(i, 1); continue; }
+      const fade = Math.sin(Math.min(p.life / p.max, 1) * Math.PI);
+      const c = p.gold ? '232,185,79' : '242,238,226';
+      fctx.beginPath();
+      fctx.arc(p.x, p.y, p.r * 2.6, 0, Math.PI * 2);
+      fctx.fillStyle = 'rgba(' + c + ',' + (0.08 * fade) + ')';
+      fctx.fill();
+      fctx.beginPath();
+      fctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      fctx.fillStyle = 'rgba(' + c + ',' + (0.35 * fade) + ')';
+      fctx.fill();
+    }
+
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const p = sparks[i];
+      p.life++;
+      p.x += p.vx; p.y += p.vy;
+      p.vy += 0.025; p.vx *= 0.985; p.vy *= 0.985;
+      if (p.life > p.max) { sparks.splice(i, 1); continue; }
+      const fade = 1 - p.life / p.max;
+      const c = p.gold ? '232,185,79' : '242,238,226';
+      fctx.beginPath();
+      fctx.arc(p.x, p.y, (p.r * fade + 0.3) * 2.4, 0, Math.PI * 2);
+      fctx.fillStyle = 'rgba(' + c + ',' + (0.18 * fade) + ')';
+      fctx.fill();
+      fctx.beginPath();
+      fctx.arc(p.x, p.y, p.r * fade + 0.3, 0, Math.PI * 2);
+      fctx.fillStyle = 'rgba(' + c + ',' + (0.9 * fade) + ')';
+      fctx.fill();
+    }
+  }
+
+  /* ================= dot grids on canvas ================= */
+  const CELL = 17;          // px per dot cell
+  const spriteCache = {};
+
+  function sprite(kind) {
+    if (spriteCache[kind]) return spriteCache[kind];
+    const c = document.createElement('canvas');
+    c.width = c.height = CELL * dpr;
+    const x = c.getContext('2d');
+    x.scale(dpr, dpr);
+    const m = CELL / 2;
+    if (kind === 'faint' || kind === 'used') {
+      x.beginPath();
+      x.arc(m, m, CELL * 0.26, 0, Math.PI * 2);
+      x.fillStyle = kind === 'used' ? '#4b4b56' : '#34343e';
+      x.fill();
+    } else { // left / now — bright core with glow halo baked in
+      const gold = kind === 'now';
+      const g = x.createRadialGradient(m, m, 0, m, m, m);
+      if (gold) {
+        g.addColorStop(0, '#fff3d0');
+        g.addColorStop(0.32, '#e8b94f');
+        g.addColorStop(0.55, 'rgba(232,185,79,.45)');
+        g.addColorStop(1, 'rgba(232,185,79,0)');
+      } else {
+        g.addColorStop(0, '#fffbef');
+        g.addColorStop(0.32, '#f2eee2');
+        g.addColorStop(0.55, 'rgba(242,238,226,.4)');
+        g.addColorStop(1, 'rgba(242,238,226,0)');
+      }
+      x.beginPath();
+      x.arc(m, m, m, 0, Math.PI * 2);
+      x.fillStyle = g;
+      x.fill();
+    }
+    spriteCache[kind] = c;
+    return c;
+  }
+
+  const grids = {};   // container id -> grid state
+
+  function dotGrid(containerId, total, used, opts) {
+    opts = opts || {};
+    const el = $(containerId);
+    el.innerHTML = '';
+    const cap = opts.cap || 5000;
+    const scale = total > cap ? total / cap : 1;
+    const shown = Math.round(total / scale);
+    const usedShown = Math.min(Math.round(used / scale), shown - 1);
+
+    const width = el.clientWidth || el.parentElement.clientWidth;
+    const cols = Math.max(Math.floor(width / CELL), 8);
+    const rows = Math.ceil(shown / cols);
+    const cv = document.createElement('canvas');
+    cv.width = cols * CELL * dpr;
+    cv.height = rows * CELL * dpr;
+    cv.style.width = (cols * CELL) + 'px';
+    cv.style.maxWidth = '100%';
+    el.appendChild(cv);
+    const ctx = cv.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    grids[containerId] = {
+      cv: cv, ctx: ctx, cols: cols, shown: shown, usedShown: usedShown,
+      drawn: 0, started: false, pulse: 0
+    };
+    if (reduced) {  // no animation: draw everything immediately
+      const g = grids[containerId];
+      g.started = true;
+      drawChunk(g, shown);
+    }
+  }
+
+  function drawChunk(g, n) {
+    const lim = Math.min(g.drawn + n, g.shown);
+    for (let i = g.drawn; i < lim; i++) {
+      const kind = i < g.usedShown ? 'used' : (i === g.usedShown ? 'now' : 'left');
+      g.ctx.drawImage(sprite(kind), (i % g.cols) * CELL, Math.floor(i / g.cols) * CELL, CELL, CELL);
+    }
+    g.drawn = lim;
+  }
+
+  function pulseNow(g) {
+    // redraw just the "today" cell with a breathing glow
+    const i = g.usedShown;
+    const cx = (i % g.cols) * CELL, cy = Math.floor(i / g.cols) * CELL;
+    g.pulse += 0.045;
+    const k = (Math.sin(g.pulse) + 1) / 2;   // 0..1
+    g.ctx.clearRect(cx, cy, CELL, CELL);
+    g.ctx.beginPath();
+    g.ctx.arc(cx + CELL / 2, cy + CELL / 2, (CELL / 2) * (0.55 + 0.45 * k), 0, Math.PI * 2);
+    g.ctx.fillStyle = 'rgba(232,185,79,' + (0.15 + 0.2 * k) + ')';
+    g.ctx.fill();
+    g.ctx.drawImage(sprite('now'), cx, cy, CELL, CELL);
+  }
+
+  /* ================= main animation loop ================= */
+  function tick() {
+    drawFx();
+    for (const id in grids) {
+      const g = grids[id];
+      if (!g.started) continue;
+      if (g.drawn < g.shown) {
+        // ~2s ignition sweep regardless of grid size
+        drawChunk(g, Math.max(Math.ceil(g.shown / 110), 1));
+        // sparks fly off the grid edge as it fills, if it's on screen
+        const r = g.cv.getBoundingClientRect();
+        if (r.top < H && r.bottom > 0 && Math.random() < 0.5) {
+          const row = Math.floor(g.drawn / g.cols);
+          const y = r.top + row * (r.height / Math.ceil(g.shown / g.cols));
+          spark(r.left + Math.random() * r.width, y, { gold: Math.random() < 0.5 });
+        }
+      } else {
+        const r = g.cv.getBoundingClientRect();
+        if (r.top < H && r.bottom > 0) pulseNow(g);
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+  if (!reduced) requestAnimationFrame(tick);
+
+  /* ================= count-up numbers ================= */
+  function countUp(el, target, dur) {
+    if (reduced) { el.textContent = fmt(target); return; }
+    const t0 = performance.now();
+    function frame(t) {
+      const k = Math.min((t - t0) / dur, 1);
+      const eased = 1 - Math.pow(1 - k, 3);
+      el.textContent = fmt(Math.round(target * eased));
+      if (k < 1) {
+        const r = el.getBoundingClientRect();
+        if (r.top < H && r.bottom > 0 && Math.random() < 0.7) {
+          spark(r.left + Math.random() * r.width, r.top + r.height * (0.2 + Math.random() * 0.6), { speed: 0.4 + Math.random() * 1.4 });
+        }
+        requestAnimationFrame(frame);
+      } else {
+        burstFrom(el, 26);
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  /* ================= reveal ================= */
+  const pending = {};   // section id -> {el, value, gridId}
   function reveal() {
     const obs = new IntersectionObserver((entries) => {
-      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('vis'); obs.unobserve(e.target); } });
+      entries.forEach(e => {
+        if (!e.isIntersecting) return;
+        e.target.classList.add('vis');
+        const job = pending[e.target.id];
+        if (job) {
+          countUp(job.el, job.value, 1900);
+          if (job.gridId && grids[job.gridId]) grids[job.gridId].started = true;
+          delete pending[e.target.id];
+        }
+        obs.unobserve(e.target);
+      });
     }, { threshold: 0.12 });
-    document.querySelectorAll('.block').forEach(b => obs.observe(b));
+    document.querySelectorAll('.block').forEach(b => { if (!b.classList.contains('vis')) obs.observe(b); });
   }
 
   function run() {
@@ -233,25 +446,26 @@
     if (!age || age < 1 || age > 99) { $('age').focus(); return; }
     const yearsLeft = Math.max(LIFE - age, 0);
 
+    $('results').classList.add('shown');   // before grid layout so widths are measurable
+
     const satTotal = Math.round(LIFE * 52.18);
     const satUsed = Math.round(age * 52.18);
-    $('n-saturdays').textContent = fmt(satTotal - satUsed);
-    dotGrid($('dots-saturdays'), satTotal, satUsed);
+    dotGrid('dots-saturdays', satTotal, satUsed);
+    pending['sec-saturdays'] = { el: $('n-saturdays'), value: satTotal - satUsed, gridId: 'dots-saturdays' };
 
-    $('n-summers').textContent = fmt(yearsLeft);
-    dotGrid($('dots-summers'), LIFE, age);
+    dotGrid('dots-summers', LIFE, age);
+    pending['sec-summers'] = { el: $('n-summers'), value: yearsLeft, gridId: 'dots-summers' };
 
     const moonTotal = Math.round(LIFE * 12.37);
     const moonUsed = Math.round(age * 12.37);
-    $('n-moons').textContent = fmt(moonTotal - moonUsed);
-    dotGrid($('dots-moons'), moonTotal, moonUsed);
+    dotGrid('dots-moons', moonTotal, moonUsed);
+    pending['sec-moons'] = { el: $('n-moons'), value: moonTotal - moonUsed, gridId: 'dots-moons' };
 
-    const bookTotal = LIFE * 12, bookUsed = age * 12;
-    $('n-books').textContent = fmt(yearsLeft * 12);
-    dotGrid($('dots-books'), bookTotal, bookUsed, { cap: 1200 });
+    dotGrid('dots-books', LIFE * 12, age * 12, { cap: 1200 });
+    pending['sec-books'] = { el: $('n-books'), value: yearsLeft * 12, gridId: 'dots-books' };
 
-    $('results').classList.add('shown');
     reveal();
+    burstFrom($('goBtn'), 40);
     document.getElementById('sec-saturdays').scrollIntoView({ behavior: 'smooth' });
   }
 
@@ -261,29 +475,42 @@
     if (!pa || !v) return;
     const theirYearsLeft = Math.max(LIFE - pa, 0);
     const visitsLeft = theirYearsLeft * v;
-    const visitsHad = Math.min(age, pa) * v; // rough: your whole life so far at today's rate
+    const visitsHad = Math.min(age || pa, pa) * v; // rough: your whole life so far at today's rate
     const pct = Math.round(visitsHad / (visitsHad + visitsLeft) * 100);
     $('pPunch').innerHTML =
       'You have about <strong>' + fmt(visitsLeft) + ' days</strong> left together. ' +
       'You’ve already used roughly <strong>' + pct + '%</strong> of your time with them.' +
       (visitsLeft <= 400 ? ' Every dot below is one of those days. You can count them.' : '');
     $('pPunch').classList.add('shown');
-    dotGrid($('dots-parents'), visitsHad + visitsLeft, visitsHad, { cap: 1500 });
+    dotGrid('dots-parents', visitsHad + visitsLeft, visitsHad, { cap: 1500 });
+    grids['dots-parents'].started = true;   // section is already revealed
+    burstFrom($('pBtn'), 30);
   }
 
+  /* ================= share ================= */
   function share() {
     const txt = 'I just found out I have ' + $('n-saturdays').textContent +
       ' Saturdays left. And ' + $('n-summers').textContent +
-      ' summers. See yours — What’s Left: ' + location.href;
-    if (navigator.share) {
-      navigator.share({ title: 'What’s Left', text: txt }).catch(() => {});
-    } else {
-      navigator.clipboard.writeText(txt).then(() => {
-        $('copied').classList.add('on');
-        setTimeout(() => $('copied').classList.remove('on'), 2600);
-      });
-    }
+      ' summers.\n\nCount yours — What’s Left:';
+    const u = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(txt) +
+      '&url=' + encodeURIComponent(location.origin + location.pathname);
+    window.open(u, '_blank', 'noopener');
   }
+
+  window.addEventListener('resize', () => {
+    resizeFx();
+    // re-layout finished grids to the new width
+    for (const id in grids) {
+      const g = grids[id];
+      if (g.drawn >= g.shown) {
+        const total = g.shown, used = g.usedShown;
+        dotGrid(id, total, used, { cap: total });
+        grids[id].started = true;
+        if (reduced) continue;
+        drawChunk(grids[id], total);
+      }
+    }
+  });
 
   $('goBtn').addEventListener('click', run);
   $('age').addEventListener('keydown', e => { if (e.key === 'Enter') run(); });
