@@ -125,6 +125,29 @@
   .punch.shown { display: block; }
   .punch strong { color: var(--gold); font-weight: 400; text-shadow: 0 0 20px rgba(232,185,79,.5); }
 
+  /* ---- the rabbit hole ---- */
+  .more {
+    margin-top: 30px;
+    background: transparent;
+    border: 1px solid rgba(232,185,79,.45);
+    color: var(--gold);
+    font-family: inherit;
+    font-size: 1rem;
+    padding: 11px 26px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: box-shadow .15s ease, border-color .15s ease;
+  }
+  .more:hover { border-color: var(--gold); box-shadow: 0 0 24px rgba(232,185,79,.3); }
+  .deep-grid { margin-top: 40px; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px 56px; }
+  .mini { color: var(--dim); font-size: 1.04rem; line-height: 1.45; opacity: 0; transform: translateY(10px); transition: opacity .6s ease, transform .6s ease; }
+  .mini.in { opacity: 1; transform: none; }
+  .mini .num { color: var(--gold); font-size: 1.45rem; text-shadow: 0 0 18px rgba(232,185,79,.4); margin-right: 6px; }
+  .mini .lbl { color: var(--ink); }
+  .mini em { font-style: italic; opacity: .85; }
+  .deep-foot { margin-top: 56px; font-size: 1.3rem; text-align: center; color: var(--ink); }
+  .deep-foot strong { color: var(--gold); font-weight: 400; text-shadow: 0 0 20px rgba(232,185,79,.5); }
+
   /* ---- share / footer ---- */
   .share-wrap { margin-top: 120px; text-align: center; }
   .share-wrap p { color: var(--dim); margin-bottom: 22px; font-size: 1.1rem; }
@@ -216,7 +239,15 @@
     <div class="share-wrap block" id="sec-share">
       <p>If a dot just hit you in the chest, it'll hit someone you love too.</p>
       <button class="go" id="shareBtn">Post what's left on 𝕏</button>
+      <div><button class="more" id="moreBtn">Like this? Keep going — it gets mind-boggling ↓</button></div>
     </div>
+
+    <section class="block" id="sec-deep" style="display:none">
+      <h2>Everything else you'll still do.</h2>
+      <p class="note">All worked out from ordinary averages and the years you have left. None of them feel ordinary written down.</p>
+      <div class="deep-grid" id="deepGrid"></div>
+      <p class="deep-foot" id="deepFoot"></p>
+    </section>
 
     <div class="footer block" id="sec-footer">
       <p><em>“It's not morbid. It's the opposite — the dots are the reason to leave work on time.”</em></p>
@@ -444,14 +475,21 @@
   if (!reduced) requestAnimationFrame(tick);
 
   /* ================= count-up numbers ================= */
-  function countUp(el, target, dur, prefix) {
+  function fmtCompact(n) {
+    if (n >= 1e9) return (n / 1e9).toFixed(1).replace(/\.0$/, '') + ' billion';
+    if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + ' million';
+    return fmt(n);
+  }
+
+  function countUp(el, target, dur, prefix, formatter) {
     prefix = prefix || '';
-    if (reduced) { el.textContent = prefix + fmt(target); return; }
+    const f = formatter || fmt;
+    if (reduced) { el.textContent = prefix + f(target); return; }
     const t0 = performance.now();
     function frame(t) {
       const k = Math.min((t - t0) / dur, 1);
       const eased = 1 - Math.pow(1 - k, 3);
-      el.textContent = prefix + fmt(Math.round(target * eased));
+      el.textContent = prefix + f(Math.round(target * eased));
       if (k < 1) {
         const r = el.getBoundingClientRect();
         if (r.top < H && r.bottom > 0 && Math.random() < 0.7) {
@@ -530,6 +568,8 @@
       delete grids['dots-parents'];
     }
 
+    if (deepOpen) buildDeep();   // refresh the rabbit hole with the new age
+
     reveal();
     burstFrom($('goBtn'), 40);
     document.getElementById('sec-saturdays').scrollIntoView({ behavior: 'smooth' });
@@ -551,6 +591,87 @@
     dotGrid('dots-parents', visitsHad + visitsLeft, visitsHad, { cap: 1500 });
     grids['dots-parents'].started = true;   // section is already revealed
     burstFrom($('pBtn'), 30);
+  }
+
+  /* ================= the rabbit hole ================= */
+  // [per-year rate, label, aside] — remaining = rate × years left
+  const STATS = [
+    [985, 'cups of coffee', 'at 2.7 a day'],
+    [910, 'cups of tea', 'the British two-and-a-half-a-day average'],
+    [1096, 'meals', 'three a day, every day'],
+    [30, 'pizzas', 'one most fortnights'],
+    [42, 'roast dinners', 'most Sundays, minus holidays'],
+    [50, 'takeaways', 'roughly one a week'],
+    [24, 'full English breakfasts', 'a couple a month'],
+    [2, 'Easter eggs', 'the national average, allegedly'],
+    [1, 'Pancake Days', 'flip carefully'],
+    [1, 'Christmas dinners', 'someone has to do the gravy'],
+    [104, 'pints', 'two a week'],
+    [26, 'bottles of wine', 'a civilised one a fortnight'],
+    [9, 'barbecues', 'the UK average — weather permitting'],
+    [20, 'sausage rolls', 'Greggs has been notified'],
+    [100, 'bananas', 'two a week'],
+    [200, 'eggs', 'scrambled, poached, dropped'],
+    [55, 'loaves of bread', 'one a week, give or take'],
+    [2.4, 'films at the cinema', 'the UK average — you can beat that'],
+    [104, 'films on the sofa', 'two a week'],
+    [7300, 'songs', 'twenty a day, everywhere you go'],
+    [8, 'haircuts', 'every six weeks or so'],
+    [300, 'showers', 'give or take a festival'],
+    [365, 'sleeps', 'every one a small reset'],
+    [1460, 'dreams', 'about four a night, mostly forgotten'],
+    [2920, 'hours of sleep', 'eight a night — a third of everything'],
+    [36800000, 'heartbeats', 'seventy a minute, no days off'],
+    [8400000, 'breaths', 'sixteen a minute, free of charge'],
+    [2555000, 'steps', 'seven thousand a day'],
+    [1200, 'miles on foot', 'a walk to somewhere, eventually'],
+    [5300000, 'blinks', 'you just did one'],
+    [0.17, 'cars', 'one every six years'],
+    [0.33, 'phone upgrades', 'one every three years'],
+    [0.2, 'laptops', 'one every five years'],
+    [3, 'pairs of shoes', 'soles wear out, you keep going'],
+    [150, 'loads of laundry', 'the drum never stops'],
+    [80, 'supermarket shops', 'you will forget the milk in many'],
+    [100, 'toilet rolls', 'nobody counts these. We did.'],
+    [25, 'lawn mows', 'April to October, forever'],
+    [52, 'Monday mornings', 'sorry'],
+    [52, 'Friday feelings', 'you have earned every one'],
+    [8, 'bank holidays', 'a year — guard them'],
+    [1, 'New Year’s Eves', 'new list, same you'],
+    [0.2, 'general elections', 'use them'],
+    [0.25, 'Olympic opening ceremonies', 'every four years'],
+    [0.8, 'Glastonburys', 'minus the fallow years'],
+    [365, 'sunrises', 'most missed. A few unmissable']
+  ];
+
+  let deepOpen = false;
+  function buildDeep() {
+    const yearsLeft = Math.max(LIFE - age, 0);
+    const grid = $('deepGrid');
+    grid.innerHTML = '';
+    STATS.forEach((s, i) => {
+      const row = document.createElement('div');
+      row.className = 'mini';
+      row.innerHTML = '<span class="num">0</span><span class="lbl">more ' + s[1] + '</span> <em>— ' + s[2] + '</em>';
+      grid.appendChild(row);
+      const value = Math.max(Math.round(s[0] * yearsLeft), 0);
+      setTimeout(() => {
+        row.classList.add('in');
+        countUp(row.querySelector('.num'), value, 1100, '', fmtCompact);
+      }, reduced ? 0 : 80 + i * 55);
+    });
+    $('deepFoot').innerHTML = 'And <strong>' + yearsLeft + ' more trips around the sun</strong>. Make them count.';
+  }
+
+  function openDeep() {
+    deepOpen = true;
+    const sec = $('sec-deep');
+    sec.style.display = 'block';
+    buildDeep();
+    requestAnimationFrame(() => sec.classList.add('vis'));
+    if (reduced) sec.classList.add('vis');
+    burstFrom($('moreBtn'), 30);
+    sec.scrollIntoView({ behavior: 'smooth' });
   }
 
   /* ================= share ================= */
@@ -581,6 +702,7 @@
   $('pBtn').addEventListener('click', runParents);
   $('pVisits').addEventListener('keydown', e => { if (e.key === 'Enter') runParents(); });
   $('shareBtn').addEventListener('click', share);
+  $('moreBtn').addEventListener('click', openDeep);
 })();
 </script>
 </body>
