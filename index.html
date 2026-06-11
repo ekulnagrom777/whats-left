@@ -33,7 +33,7 @@
   }
   /* wide container so the dot grids spread out instead of stacking into a long scroll;
      prose stays readable via max-width on the text elements themselves */
-  main { max-width: 1180px; margin: 0 auto; padding: 0 32px 120px; position: relative; z-index: 1; }
+  main { max-width: 1500px; margin: 0 auto; padding: 0 32px 120px; position: relative; z-index: 1; }
 
   /* ---- hero ---- */
   .hero { min-height: 88vh; display: flex; flex-direction: column; justify-content: center; }
@@ -284,19 +284,20 @@
   }
 
   /* ================= dot grids on canvas ================= */
-  const CELL = 17;          // px per dot cell
+  const CELL = 17;          // default px per dot cell; dense grids pass a smaller one
   const spriteCache = {};
 
-  function sprite(kind) {
-    if (spriteCache[kind]) return spriteCache[kind];
+  function sprite(kind, cell) {
+    const key = kind + cell;
+    if (spriteCache[key]) return spriteCache[key];
     const c = document.createElement('canvas');
-    c.width = c.height = CELL * dpr;
+    c.width = c.height = cell * dpr;
     const x = c.getContext('2d');
     x.scale(dpr, dpr);
-    const m = CELL / 2;
+    const m = cell / 2;
     if (kind === 'faint' || kind === 'used') {
       x.beginPath();
-      x.arc(m, m, CELL * 0.26, 0, Math.PI * 2);
+      x.arc(m, m, cell * 0.26, 0, Math.PI * 2);
       x.fillStyle = kind === 'used' ? '#4b4b56' : '#34343e';
       x.fill();
     } else { // left / now — bright core with glow halo baked in
@@ -318,7 +319,7 @@
       x.fillStyle = g;
       x.fill();
     }
-    spriteCache[kind] = c;
+    spriteCache[key] = c;
     return c;
   }
 
@@ -329,25 +330,26 @@
     const el = $(containerId);
     el.innerHTML = '';
     const cap = opts.cap || 5000;
+    const cell = opts.cell || CELL;
     const scale = total > cap ? total / cap : 1;
     const shown = Math.round(total / scale);
     const usedShown = Math.min(Math.round(used / scale), shown - 1);
 
     const width = el.clientWidth || el.parentElement.clientWidth;
-    const cols = Math.max(Math.floor(width / CELL), 8);
+    const cols = Math.max(Math.floor(width / cell), 8);
     const rows = Math.ceil(shown / cols);
     const cv = document.createElement('canvas');
-    cv.width = cols * CELL * dpr;
-    cv.height = rows * CELL * dpr;
-    cv.style.width = (cols * CELL) + 'px';
+    cv.width = cols * cell * dpr;
+    cv.height = rows * cell * dpr;
+    cv.style.width = (cols * cell) + 'px';
     cv.style.maxWidth = '100%';
     el.appendChild(cv);
     const ctx = cv.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     grids[containerId] = {
-      cv: cv, ctx: ctx, cols: cols, shown: shown, usedShown: usedShown,
-      drawn: 0, started: false, pulse: 0
+      cv: cv, ctx: ctx, cols: cols, cell: cell, shown: shown, usedShown: usedShown,
+      drawn: 0, started: false, pulse: 0, opts: opts, total: total, used: used
     };
     if (reduced) {  // no animation: draw everything immediately
       const g = grids[containerId];
@@ -360,7 +362,7 @@
     const lim = Math.min(g.drawn + n, g.shown);
     for (let i = g.drawn; i < lim; i++) {
       const kind = i < g.usedShown ? 'used' : (i === g.usedShown ? 'now' : 'left');
-      g.ctx.drawImage(sprite(kind), (i % g.cols) * CELL, Math.floor(i / g.cols) * CELL, CELL, CELL);
+      g.ctx.drawImage(sprite(kind, g.cell), (i % g.cols) * g.cell, Math.floor(i / g.cols) * g.cell, g.cell, g.cell);
     }
     g.drawn = lim;
   }
@@ -368,15 +370,16 @@
   function pulseNow(g) {
     // redraw just the "today" cell with a breathing glow
     const i = g.usedShown;
-    const cx = (i % g.cols) * CELL, cy = Math.floor(i / g.cols) * CELL;
+    const c = g.cell;
+    const cx = (i % g.cols) * c, cy = Math.floor(i / g.cols) * c;
     g.pulse += 0.045;
     const k = (Math.sin(g.pulse) + 1) / 2;   // 0..1
-    g.ctx.clearRect(cx, cy, CELL, CELL);
+    g.ctx.clearRect(cx, cy, c, c);
     g.ctx.beginPath();
-    g.ctx.arc(cx + CELL / 2, cy + CELL / 2, (CELL / 2) * (0.55 + 0.45 * k), 0, Math.PI * 2);
+    g.ctx.arc(cx + c / 2, cy + c / 2, (c / 2) * (0.55 + 0.45 * k), 0, Math.PI * 2);
     g.ctx.fillStyle = 'rgba(232,185,79,' + (0.15 + 0.2 * k) + ')';
     g.ctx.fill();
-    g.ctx.drawImage(sprite('now'), cx, cy, CELL, CELL);
+    g.ctx.drawImage(sprite('now', c), cx, cy, c, c);
   }
 
   /* ================= main animation loop ================= */
@@ -453,10 +456,10 @@
 
     const satTotal = Math.round(LIFE * 52.18);
     const satUsed = Math.round(age * 52.18);
-    dotGrid('dots-saturdays', satTotal, satUsed);
+    dotGrid('dots-saturdays', satTotal, satUsed, { cell: 10 });   // dense — the whole wall should fit on one screen
     pending['sec-saturdays'] = { el: $('n-saturdays'), value: satTotal - satUsed, gridId: 'dots-saturdays' };
 
-    dotGrid('dots-summers', LIFE, age);
+    dotGrid('dots-summers', LIFE, age, { cell: 30 });             // each dot is a whole summer — let them be big
     pending['sec-summers'] = { el: $('n-summers'), value: yearsLeft, gridId: 'dots-summers' };
 
     const moonTotal = Math.round(LIFE * 12.37);
@@ -506,11 +509,9 @@
     for (const id in grids) {
       const g = grids[id];
       if (g.drawn >= g.shown) {
-        const total = g.shown, used = g.usedShown;
-        dotGrid(id, total, used, { cap: total });
+        dotGrid(id, g.total, g.used, g.opts);
         grids[id].started = true;
-        if (reduced) continue;
-        drawChunk(grids[id], total);
+        if (!reduced) drawChunk(grids[id], grids[id].shown);
       }
     }
   });
