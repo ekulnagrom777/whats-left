@@ -31,11 +31,14 @@
     position: fixed; inset: 0; width: 100%; height: 100%;
     pointer-events: none; z-index: 5;
   }
-  main { max-width: 680px; margin: 0 auto; padding: 0 24px 120px; position: relative; z-index: 1; }
+  /* wide container so the dot grids spread out instead of stacking into a long scroll;
+     prose stays readable via max-width on the text elements themselves */
+  main { max-width: 1180px; margin: 0 auto; padding: 0 32px 120px; position: relative; z-index: 1; }
 
   /* ---- hero ---- */
   .hero { min-height: 88vh; display: flex; flex-direction: column; justify-content: center; }
   .hero h1 {
+    max-width: 16em;
     font-size: clamp(2.6rem, 8vw, 4.4rem);
     font-weight: 400;
     letter-spacing: -0.02em;
